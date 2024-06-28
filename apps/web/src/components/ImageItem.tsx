@@ -51,98 +51,96 @@ export function TbZoomIn(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-const ImageItem = (
-  {
-    file,
-    outputSize,
-    outputFormat,
-    outputSizingMode,
-    thumbnailScale,
-    onDelete,
-  }: {
-    file: File;
-    outputSize: Size;
-    outputFormat: OutputFormat;
-    outputSizingMode: OutputSizingMode;
-    thumbnailScale: number;
-    onDelete: () => void;
-  },
-  ref: Ref<AvatarEditor>,
-) => {
-  const editorRef = useRef<AvatarEditor | null>(null);
-  const [scale, setScaleImpl] = useState(1);
-  const [minScalePerc, setMinScalePerc] = useState(1);
-  const [maxScalePerc, setMaxScalePerc] = useState(1);
 
-  const setScale = useCallback((value: number) => {
-    setScaleImpl(parseFloat(value.toFixed(2)));
-  }, []);
+type Ratio = 'square' | '3:4' | '4:3';
 
-  return (
-    <div
-      className="card card-compact shadow-xl bg-base-100"
-      style={{
-        width: (thumbnailScale * outputSize.width).toFixed(2) + 'px',
-      }}
-    >
-      <figure
-        className="w-full"
+const ImageItem = forwardRef(
+  (
+    {
+      file,
+      outputSize,
+      outputFormat,
+      outputSizingMode,
+      thumbnailScale,
+      onDelete,
+    }: {
+      file: File;
+      outputSize: Size;
+      outputFormat: OutputFormat;
+      outputSizingMode: OutputSizingMode;
+      thumbnailScale: number;
+      onDelete: () => void;
+    },
+    ref: Ref<AvatarEditor>,
+  ) => {
+    const editorRef = useRef<AvatarEditor | null>(null);
+    const [scale, setScaleImpl] = useState(1);
+    const [minScalePerc, setMinScalePerc] = useState(1);
+    const [maxScalePerc, setMaxScalePerc] = useState(1);
+    const [selectedRatio, setSelectedRatio] = useState<Ratio>('square');
+
+    const setScale = useCallback((value: number) => {
+      setScaleImpl(parseFloat(value.toFixed(2)));
+    }, []);
+
+    const calculateDimensions = (ratio: Ratio): Size => {
+      const baseSize = Math.min(outputSize.width, outputSize.height);
+      switch (ratio) {
+        case 'square':
+          return { width: baseSize, height: baseSize };
+        case '3:4':
+          return { width: baseSize * 3 / 4, height: baseSize };
+        case '4:3':
+          return { width: baseSize, height: baseSize * 3 / 4 };
+      }
+    };
+
+    const dimensions = calculateDimensions(selectedRatio);
+
+    return (
+      <div
+        className="card card-compact shadow-xl bg-base-100"
         style={{
-          height: (thumbnailScale * outputSize.height).toFixed(2) + 'px',
+          width: (thumbnailScale * dimensions.width).toFixed(2) + 'px',
         }}
       >
-        <div
+        <figure
+          className="w-full"
           style={{
-            scale: thumbnailScale.toFixed(2),
+            height: (thumbnailScale * dimensions.height).toFixed(2) + 'px',
           }}
         >
-          <AvatarEditor
-            image={file}
-            ref={(el) => {
-              editorRef.current = el;
-              if (typeof ref === 'function') {
-                ref(el);
-              }
-            }}
-            width={outputSize.width}
-            height={outputSize.height}
-            border={0}
-            scale={scale}
-            onLoadSuccess={(image) => {
-              setMinScalePerc(
-                Math.ceil((Math.min(image.width, image.height) / Math.max(image.width, image.height)) * 100),
-              );
-              setMaxScalePerc(
-                Math.floor(Math.min(image.resource.width / image.width, image.resource.height / image.height) * 100),
-              );
-            }}
-          />
-        </div>
-      </figure>
-      <div className="card-body">
-        <div className="w-full flex justify-center gap-1">
-          <div className="truncate">{file.name}</div>
-          <button
-            className="btn btn-xs btn-square"
-            onClick={async () => {
-              if (!editorRef.current) return;
-
-              const blob = await getImageBlobFromEditor(editorRef.current, outputFormat, outputSizingMode);
-              const blobUrl = URL.createObjectURL(blob);
-
-              const hiddenLink = document.createElement('a');
-              hiddenLink.style.display = 'none';
-              hiddenLink.href = blobUrl;
-              hiddenLink.download = file.name;
-              document.body.appendChild(hiddenLink);
-
-              hiddenLink.click();
-
-              mixpanel.track('downloaded');
+          <div
+            style={{
+              scale: thumbnailScale.toFixed(2),
             }}
           >
-            <TbDownload />
-          </button>
+            <AvatarEditor
+              image={file}
+              ref={(el) => {
+                editorRef.current = el;
+                if (typeof ref === 'function') {
+                  ref(el);
+                }
+              }}
+              width={dimensions.width}
+              height={dimensions.height}
+              border={0}
+              scale={scale}
+              onLoadSuccess={(image) => {
+                setMinScalePerc(
+                  Math.ceil((Math.min(image.width, image.height) / Math.max(image.width, image.height)) * 100),
+                );
+                setMaxScalePerc(
+                  Math.floor(Math.min(image.resource.width / image.width, image.resource.height / image.height) * 100),
+                );
+              }}
+            />
+          </div>
+        </figure>
+        <div className="card-body">
+          <div className="w-full flex justify-center gap-1">
+            <div className="truncate">{file.name}</div>
           <button
             className="btn btn-xs btn-square"
             onClick={() => {
@@ -151,8 +149,28 @@ const ImageItem = (
           >
             <TbX />
           </button>
-        </div>
-        <div className="flex items-center gap-2">
+          </div>
+          <div className="flex justify-center gap-2 mt-2">
+            <button
+              className={`btn btn-xs ${selectedRatio === 'square' ? 'btn-active' : ''}`}
+              onClick={() => setSelectedRatio('square')}
+            >
+              1:1
+            </button>
+            <button
+              className={`btn btn-xs ${selectedRatio === '3:4' ? 'btn-active' : ''}`}
+              onClick={() => setSelectedRatio('3:4')}
+            >
+              3:4
+            </button>
+            <button
+              className={`btn btn-xs ${selectedRatio === '4:3' ? 'btn-active' : ''}`}
+              onClick={() => setSelectedRatio('4:3')}
+            >
+              4:3
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
           <div className="text-lg">
             <TbZoomIn />
           </div>
@@ -184,10 +202,11 @@ const ImageItem = (
               }
             }}
           />
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
+);
 
-export default forwardRef(ImageItem);
+export default ImageItem;

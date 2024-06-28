@@ -43,8 +43,6 @@ function TbCheck(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-type Ratio = 'square' | '3:4' | '4:3';
-
 function ImageSelectorImpl({
   onLoad,
   outputSize,
@@ -57,7 +55,6 @@ function ImageSelectorImpl({
   outputFormat: OutputFormat;
 }) {
   const [files, setFiles] = useState<ImageFile[]>([]);
-  const [selectedRatio, setSelectedRatio] = useState<Ratio>('square');
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     noClick: true,
     accept: {
